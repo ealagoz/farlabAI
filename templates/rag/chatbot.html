@@ -1,0 +1,98 @@
+{% extends 'public.html' %}
+
+{% load static %}
+
+{% block title %}FarlabAI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" id="chat-container">
+    <div class="d-flex align-items-center mb-4">
+        <img src="{% static 'images/farlab_logo.png' %}" alt="Logo" class="logo mr-3">
+        <h2 class="text-primary title">FarlabAI</h2>
+    </div>
+    <div id="response-container" class="chat-box mb-3 p-3 border rounded bg-white">
+        <div id="response"></div>
+    </div>
+    <form id="chat-form" class="d-flex">
+        <input type="text" id="prompt" name="prompt" placeholder="Ask a question..." class="form-control mr-2">
+        <select id="document_id" name="document_id" class="form-control mr-2">
+            {% for document in documents %}
+                <option value="{{ document.id }}">{{ document.file_name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Send</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const documentSelect = document.getElementById('document_id');
+        if (documentSelect.options.length === 0) {
+            const noDocumentsOption = document.createElement('option');
+            noDocumentsOption.text = 'No documents available';
+            noDocumentsOption.value = '';
+            documentSelect.add(noDocumentsOption);
+        }
+    });
+
+    document.getElementById('chat-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const prompt = document.getElementById('prompt').value;
+        const documentId = document.getElementById('document_id').value;
+        if (prompt.trim() === "") return;
+
+        // Append user message
+        const userMessageContainer = document.createElement('div');
+        userMessageContainer.className = 'message-container user-message-container my-2 p-2 rounded';
+
+        const userMessage = document.createElement('div');
+        userMessage.className = 'message user-message';
+        userMessage.innerText = prompt;
+        userMessageContainer.appendChild(userMessage);
+        document.getElementById('response').appendChild(userMessageContainer);
+
+        fetch('{% url "farlabRAG:generate_response" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: new URLSearchParams({ 'prompt': prompt, 'document_id': documentId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const botMessageContainer = document.createElement('div');
+            botMessageContainer.className = 'message-container bot-message-container my-2 p-2 rounded';
+
+            const botMessage = document.createElement('div');
+            botMessage.className = 'message bot-message';
+            if (data.response) {
+                botMessage.innerHTML = data.response.replace(/\n/g, '<br>');
+            } else if (data.error) {
+                botMessage.innerText = data.error;
+            }
+            botMessageContainer.appendChild(botMessage);
+            document.getElementById('response').appendChild(botMessageContainer);
+            document.getElementById('prompt').value = '';
+            document.getElementById('response-container').scrollTop = document.getElementById('response-container').scrollHeight;
+        })
+        .catch(error => {
+            const errorMessageContainer = document.createElement('div');
+            errorMessageContainer.className = 'message-container bot-message-container my-2 p-2 rounded';
+
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'message bot-message';
+            errorMessage.innerText = 'An error occurred: ' + error;
+            errorMessageContainer.appendChild(errorMessage);
+            document.getElementById('response').appendChild(errorMessageContainer);
+            document.getElementById('response-container').scrollTop = document.getElementById('response-container').scrollHeight;
+        });
+    });
+</script>
+{% endblock %}

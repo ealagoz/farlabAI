@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}List Embeddings{% endblock %}
+
+{% block content %}
+<h1>List of Embeddings</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Document ID</th>
+            <th>Document Name</th>
+            <th>Embedding Data (Snippet)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for embedding in embeddings %}
+        <tr>
+            <td>{{ embedding.document_id }}</td>
+            <td>{{ embedding.document_name }}</td>
+            <td>{{ embedding.embedding_data }}</td>  </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
